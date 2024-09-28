@@ -5,7 +5,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 // Lấy code từ GitHub
-                git branch: 'master', url: 'https://github.com/Nanz99/jenkin-check'
+                git branch: 'main', url: 'https://github.com/Nanz99/jenkin-check'
             }
         }
 
