@@ -4,8 +4,8 @@ pipeline {
     environment {
         // Docker environment variables
         DOCKER_IMAGE = 'anhnhut/react-app'
-        DOCKERHUB_USERNAME = 'anhnhut'  // Publicly loggable value
-        // DOCKERHUB_PASSWORD should be securely stored in Jenkins credentials
+        DOCKERHUB_USERNAME = 'anhnhut'
+        // DOCKERHUB_PASSWORD should be stored in Jenkins Credentials securely
     }
 
     stages {
@@ -20,10 +20,10 @@ pipeline {
         stage('Build Application') {
             steps {
                 echo 'Installing dependencies...'
-                sh 'npm install'
+                bat 'npm install'
 
                 echo 'Building the ReactJS application...'
-                sh 'npm run build'
+                bat 'npm run build'
                 echo 'Build completed successfully.'
             }
         }
@@ -31,11 +31,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo 'Building the Docker image...'
-                // Log the Docker image name for debugging
-                echo "Docker Image: ${DOCKER_IMAGE}"
-
-                // Build the Docker image using shell commands
-                sh "docker build -t ${DOCKER_IMAGE}:latest ."
+                // Building the Docker image using direct Docker command in batch
+                bat "docker build -t ${DOCKER_IMAGE} ."
                 echo 'Docker image built successfully.'
             }
         }
@@ -44,19 +41,21 @@ pipeline {
             steps {
                 echo 'Logging into DockerHub...'
 
-                // Log the DockerHub username for debugging (non-sensitive)
-                echo "DockerHub Username: ${DOCKERHUB_USERNAME}"
-
                 // Secure DockerHub credentials using Jenkins Credentials
                 withCredentials([string(credentialsId: 'DOCKERHUB_PASSWORD', variable: 'DOCKERHUB_PASSWORD')]) {
                     script {
-                        // Log in to DockerHub securely
+                        // Log in to DockerHub securely using the shell instead of batch for better environment handling
                         sh '''
                         echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_USERNAME --password-stdin
-                        docker push ${DOCKER_IMAGE}:latest
                         '''
+                        echo 'Logged into DockerHub successfully.'
+
+                        // Push the Docker image
+                        echo "Pushing the Docker image: ${DOCKER_IMAGE}:latest"
+                        sh "docker push ${DOCKER_IMAGE}:latest"
                     }
                 }
+
                 echo 'Docker image pushed to DockerHub successfully.'
             }
         }
@@ -64,10 +63,10 @@ pipeline {
         stage('Deploy Application') {
             steps {
                 echo 'Deploying the application...'
-                // Stopping, removing old container, and running a new one
-                sh '''
-                docker stop react-app || true
-                docker rm react-app || true
+                // Stopping, removing old container and running new one
+                bat '''
+                docker stop react-app || exit 0
+                docker rm react-app || exit 0
                 docker run -d -p 80:80 --name react-app ${DOCKER_IMAGE}:latest
                 '''
                 echo 'Application deployed successfully.'
@@ -78,7 +77,7 @@ pipeline {
     post {
         always {
             echo 'Cleaning up Docker resources...'
-            sh 'docker system prune -f'
+            bat 'docker system prune -f'
             echo 'Pipeline completed.'
         }
     }
