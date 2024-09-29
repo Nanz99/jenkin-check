@@ -2,17 +2,18 @@ pipeline {
     agent any
 
     environment {
-        // Biến môi trường cho Docker
+        // Docker environment variables
         DOCKER_IMAGE = 'anhnhut/react-app'
         DOCKERHUB_USERNAME = 'anhnhut'
-        DOCKERHUB_PASSWORD = '0830.9900.1111' // Không khuyến khích lưu thông tin đăng nhập ở đây.
+        // Do not store sensitive information directly; use Jenkins credentials
+        // DOCKERHUB_PASSWORD should be stored in Jenkins Credentials, not here
     }
 
     stages {
         stage('Clone Repository') {
             steps {
                 echo 'Cloning the repository from GitHub...'
-                // Clone mã nguồn từ GitHub
+                // Clone the source code from GitHub
                 git branch: 'main', url: 'https://github.com/Nanz99/jenkin-check.git'
                 echo 'Repository cloned successfully.'
             }
@@ -21,12 +22,11 @@ pipeline {
         stage('Build Application') {
             steps {
                 echo 'Installing dependencies...'
-                // Cài đặt các dependencies của ứng dụng ReactJS
-                sh 'npm install'
+                // Use 'bat' for Windows batch commands
+                bat 'npm install'
 
                 echo 'Building the ReactJS application...'
-                // Build ứng dụng ReactJS
-                sh 'npm run build'
+                bat 'npm run build'
                 echo 'Build completed successfully.'
             }
         }
@@ -34,8 +34,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo 'Building the Docker image...'
-                // Build Docker image từ Dockerfile
                 script {
+                    // Ensure Docker is running and build the image
                     def app = docker.build("${DOCKER_IMAGE}")
                 }
                 echo 'Docker image built successfully.'
@@ -45,12 +45,14 @@ pipeline {
         stage('Docker Login and Push') {
             steps {
                 echo 'Logging into DockerHub...'
-                // Đăng nhập DockerHub và đẩy Docker image lên
-                script {
-                    sh '''
-                    echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
-                    docker push ${DOCKER_IMAGE}:latest
-                    '''
+                // Secure DockerHub credentials using Jenkins Credentials
+                withCredentials([string(credentialsId: 'DOCKERHUB_PASSWORD', variable: 'DOCKERHUB_PASSWORD')]) {
+                    script {
+                        bat '''
+                        echo %DOCKERHUB_PASSWORD% | docker login -u %DOCKERHUB_USERNAME% --password-stdin
+                        docker push ${DOCKER_IMAGE}:latest
+                        '''
+                    }
                 }
                 echo 'Docker image pushed to DockerHub successfully.'
             }
@@ -59,11 +61,11 @@ pipeline {
         stage('Deploy Application') {
             steps {
                 echo 'Deploying the application...'
-                // Dừng container cũ (nếu có) và chạy container mới từ Docker image
                 script {
-                    sh '''
-                    docker stop react-app || true
-                    docker rm react-app || true
+                    // Deploy the application by stopping and removing old containers and running a new one
+                    bat '''
+                    docker stop react-app || exit 0
+                    docker rm react-app || exit 0
                     docker run -d -p 80:80 --name react-app ${DOCKER_IMAGE}:latest
                     '''
                 }
@@ -75,8 +77,8 @@ pipeline {
     post {
         always {
             echo 'Cleaning up Docker resources...'
-            // Clean up Docker để giải phóng bộ nhớ sau mỗi build
-            sh 'docker system prune -f'
+            // Cleanup Docker system to free up space
+            bat 'docker system prune -f'
 
             echo 'Pipeline completed.'
         }
