@@ -5,7 +5,7 @@ pipeline {
         // Docker environment variables
         DOCKER_IMAGE = 'anhnhut/react-app'
         DOCKERHUB_USERNAME = 'anhnhut'  // Publicly loggable value
-        // DOCKERHUB_PASSWORD should be stored securely in Jenkins credentials
+        // DOCKERHUB_PASSWORD should be securely stored in Jenkins credentials
     }
 
     stages {
@@ -20,10 +20,10 @@ pipeline {
         stage('Build Application') {
             steps {
                 echo 'Installing dependencies...'
-                bat 'npm install'
+                sh 'npm install'
 
                 echo 'Building the ReactJS application...'
-                bat 'npm run build'
+                sh 'npm run build'
                 echo 'Build completed successfully.'
             }
         }
@@ -34,8 +34,8 @@ pipeline {
                 // Log the Docker image name for debugging
                 echo "Docker Image: ${DOCKER_IMAGE}"
 
-                // Build the Docker image using batch commands
-                bat "docker build -t %DOCKER_IMAGE% ."
+                // Build the Docker image using shell commands
+                sh "docker build -t ${DOCKER_IMAGE}:latest ."
                 echo 'Docker image built successfully.'
             }
         }
@@ -50,16 +50,10 @@ pipeline {
                 // Secure DockerHub credentials using Jenkins Credentials
                 withCredentials([string(credentialsId: 'DOCKERHUB_PASSWORD', variable: 'DOCKERHUB_PASSWORD')]) {
                     script {
-                        // Mask the password for security and avoid plain-text output
-                        echo "Logging in to DockerHub..."
-
-                        // Log a masked password message (DO NOT log actual password)
-                        echo "DockerHub Password is set (masked)"
-
-                        // Log in and push the image using batch commands
-                        bat '''
-                        echo %DOCKERHUB_PASSWORD% | docker login -u %DOCKERHUB_USERNAME% --password-stdin
-                        docker push %DOCKER_IMAGE%:latest
+                        // Log in to DockerHub securely
+                        sh '''
+                        echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_USERNAME --password-stdin
+                        docker push ${DOCKER_IMAGE}:latest
                         '''
                     }
                 }
@@ -71,10 +65,10 @@ pipeline {
             steps {
                 echo 'Deploying the application...'
                 // Stopping, removing old container, and running a new one
-                bat '''
-                docker stop react-app || exit 0
-                docker rm react-app || exit 0
-                docker run -d -p 80:80 --name react-app %DOCKER_IMAGE%:latest
+                sh '''
+                docker stop react-app || true
+                docker rm react-app || true
+                docker run -d -p 80:80 --name react-app ${DOCKER_IMAGE}:latest
                 '''
                 echo 'Application deployed successfully.'
             }
@@ -84,7 +78,7 @@ pipeline {
     post {
         always {
             echo 'Cleaning up Docker resources...'
-            bat 'docker system prune -f'
+            sh 'docker system prune -f'
             echo 'Pipeline completed.'
         }
     }
