@@ -5,7 +5,7 @@ pipeline {
         // Docker environment variables
         DOCKER_IMAGE = 'anhnhut/react-app'
         DOCKERHUB_USERNAME = 'anhnhut'
-        // DOCKERHUB_PASSWORD should be stored in Jenkins Credentials securely
+        DOCKERHUB_PASSWORD = '0830.9900.1111'  // Not secure! For demonstration only.
     }
 
     stages {
@@ -41,16 +41,11 @@ pipeline {
             steps {
                 echo 'Logging into DockerHub...'
 
-                // Secure DockerHub credentials using Jenkins Credentials
-                withCredentials([string(credentialsId: 'DOCKERHUB_PASSWORD', variable: 'DOCKERHUB_PASSWORD')]) {
-                    script {
-                        // Using bat to run Docker login and push commands on Windows
-                        bat """
-                        echo %DOCKERHUB_PASSWORD% | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
-                        docker push ${DOCKER_IMAGE}:latest
-                        """
-                    }
-                }
+                // Using the environment variable directly for the DockerHub password (not secure)
+                bat """
+                echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
+                docker push ${DOCKER_IMAGE}:latest
+                """
 
                 echo 'Docker image pushed to DockerHub successfully.'
             }
