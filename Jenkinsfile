@@ -4,7 +4,7 @@ pipeline {
     environment {
         // Docker environment variables
         DOCKER_IMAGE = 'anhnhut/react-app'
-        DOCKERHUB_USERNAME = 'anhnhut'
+        DOCKERHUB_USERNAME = 'iamanhnhut.0101@gmail.com'  // Not secure! For demonstration only.
         DOCKERHUB_PASSWORD = '0830.9900.1111'  // Not secure! For demonstration only.
     }
 
@@ -41,7 +41,7 @@ pipeline {
             steps {
                 echo 'Logging into DockerHub...'
 
-                // Using the environment variable directly for the DockerHub password (not secure)
+                // Login using the environment variable for the DockerHub password on Windows
                 bat """
                 echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
                 docker push ${DOCKER_IMAGE}:latest
