@@ -31,7 +31,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo 'Building the Docker image...'
-                // Building the Docker image using direct Docker command in batch
+                // Building the Docker image using a batch command
                 bat "docker build -t ${DOCKER_IMAGE} ."
                 echo 'Docker image built successfully.'
             }
@@ -44,15 +44,11 @@ pipeline {
                 // Secure DockerHub credentials using Jenkins Credentials
                 withCredentials([string(credentialsId: 'DOCKERHUB_PASSWORD', variable: 'DOCKERHUB_PASSWORD')]) {
                     script {
-                        // Log in to DockerHub securely using the shell instead of batch for better environment handling
-                        sh '''
-                        echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_USERNAME --password-stdin
-                        '''
-                        echo 'Logged into DockerHub successfully.'
-
-                        // Push the Docker image
-                        echo "Pushing the Docker image: ${DOCKER_IMAGE}:latest"
-                        sh "docker push ${DOCKER_IMAGE}:latest"
+                        // Using bat to run Docker login and push commands on Windows
+                        bat """
+                        echo %DOCKERHUB_PASSWORD% | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
+                        docker push ${DOCKER_IMAGE}:latest
+                        """
                     }
                 }
 
@@ -63,7 +59,7 @@ pipeline {
         stage('Deploy Application') {
             steps {
                 echo 'Deploying the application...'
-                // Stopping, removing old container and running new one
+                // Stopping, removing old container, and running a new one
                 bat '''
                 docker stop react-app || exit 0
                 docker rm react-app || exit 0
