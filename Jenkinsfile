@@ -1,28 +1,53 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKER_IMAGE = 'anhnhut/react-app'
+        DOCKERHUB_USERNAME = 'anhnhut'
+        DOCKERHUB_PASSWORD = '0830.9900.1111'
+    }
+
     stages {
-        stage('Checkout') {
+        stage('Clone Repository') {
             steps {
-                // Lấy code từ GitHub
-                git branch: 'main', url: 'https://github.com/Nanz99/jenkin-check'
+                git branch: 'main', url: 'https://github.com/Nanz99/jenkin-check.git',
+            }
+        }
+
+        stage('Build Application') {
+            steps {
+                sh 'npm install'
+                sh 'npm run build'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                // Build Docker image từ Dockerfile
                 script {
-                    dockerImage = docker.build("jenkin-check")
+                    def app = docker.build("${DOCKER_IMAGE}")
                 }
             }
         }
 
-        stage('Run Docker Container') {
+        stage('Docker Login and Push') {
             steps {
-                // Chạy container từ image đã build
                 script {
-                    dockerImage.run('-p 80:80')
+                    sh '''
+                    echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
+                    docker push ${DOCKER_IMAGE}:latest
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy Application') {
+            steps {
+                script {
+                    sh '''
+                    docker stop react-app || true
+                    docker rm react-app || true
+                    docker run -d -p 80:80 --name react-app ${DOCKER_IMAGE}:latest
+                    '''
                 }
             }
         }
@@ -30,8 +55,7 @@ pipeline {
 
     post {
         always {
-            // Dọn dẹp container sau khi xong việc
-            sh 'docker container prune -f'
+            sh 'docker system prune -f'
         }
     }
 }
